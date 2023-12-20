@@ -48,6 +48,7 @@
 </template>
 
 <script>
+
 import mixin from "./mixin.js";
 import JSON from "./json";
 import GanttView from "./ganttView.vue";
