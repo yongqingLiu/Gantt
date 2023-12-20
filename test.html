@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Document</title>
+        <style>
+            * {
+                padding: 0px;
+                margin: 0px;
+            }
+            .box {
+                width: 300px;
+                height: 30px;
+                background: pink;
+                position: absolute;
+                left: 0;
+                top: 0;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="box" id="moveElement">我可以移动</div>
+        <script>
+            window.onload = function () {
+                // 获取元素节点
+                let moveElement = document.getElementById("moveElement");
+                // 给元素注册鼠标按下事件
+                moveElement.onmousedown = function (e) {
+                    //兼容  e || window.event  现在都可以
+                    let event = e || window.event;
+                    // 获取鼠标按下去的那一个点距离边框顶部和左侧的距离
+                    let point_x = event.offsetX;
+                    let point_y = event.offsetY;
+                    //  鼠标移动(小方块在文档上移动，给文档注册一个是移动事件)
+                    document.onmousemove = function (ent) {
+                        let evt = ent || window.event;
+                        // 获取鼠标移动的坐标位置
+                        let ele_left = evt.clientX - point_x;
+                        let ele_top = evt.clientY - point_y;
+                        // 将移动的新的坐标位置进行赋值
+                        moveElement.style.left = ele_left + "px";
+                        moveElement.style.top = ele_top + "px";
+                    };
+                };
+            };
+        </script>
+    </body>
+</html>
