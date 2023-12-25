@@ -29,9 +29,10 @@
                 <div ref="ganttItemBox" class="ganttItemBox" id="ganttItemBox">
                     <div class="ganttList">
                         <div v-for="(item, index) in ganttList" :key="index" :style="{ height: item.overlapNum * 30 + 'px' }">
-                            <div class="acRegRow" :id="'acRegRow_' + item.acReg" @mouseup="mouseUp($event, item.acReg)" @mouseenter="mouseenter($event, index)">
+                            <div class="acRegRow" :id="'acRegRow_' + item.acReg" @mouseup="mouseUp($event, item.acReg)">
                                 <!-- 每个甘特条 -->
                                 <GanttView
+                                    @clickGanttItem="clickGanttItem"
                                     :initDate="initDateTime"
                                     :hourWidht="hourWidht"
                                     v-for="(flight, _index) in item.flights"
@@ -48,7 +49,6 @@
 </template>
 
 <script>
-
 import mixin from "./mixin.js";
 import JSON from "./json";
 import GanttView from "./ganttView.vue";
@@ -124,8 +124,6 @@ export default {
             });
             this.calcAcRegOverlap();
         },
-        //  计算每个甘特条的位置
-        calcGanttItemPosition() {},
 
         // 计算每个机号是否重叠，重叠了多少层
         calcAcRegOverlap() {
@@ -151,6 +149,12 @@ export default {
                         arr.push(list[i + 1]);
                     }
                 }
+                // 重叠的重新恢复原本起止时间
+                arr.forEach((item) => {
+                    let data = genttViewPositionValue(item);
+                    item.positionValue.startTime = data.startTime;
+                    item.positionValue.endTime = data.endTime;
+                });
                 if (arr.length) {
                     item.overlapNum += 1;
                     overlapHandle(arr, item);
@@ -171,13 +175,14 @@ export default {
                 item.flights = item.flights.sort((a, b) => a.positionValue.startTime - b.positionValue.startTime);
                 overlapHandle(item.flights, item);
             });
+            // console.log(this.ganttList);
         },
     },
     mounted() {
         // 获取当前屏幕宽度
         this.currentWindowWidth = document.body.clientWidth - 100;
-        this.timeLineStyle.width = this.initHours * this.hourWidht + "px";
-        this.$refs.ganttItemBox.style.width = this.initHours * this.hourWidht + "px";
+        this.timeLineStyle.width = this.initHours * this.hourWidht + "px";// 时间轴宽度
+        this.$refs.ganttItemBox.style.width = this.initHours * this.hourWidht + "px";// 甘特图容器宽度
         // 屏幕变化改变每个小时的宽度
         window.onresize = () => {
             this.currentWindowWidth = document.body.clientWidth - 100;
@@ -197,6 +202,7 @@ export default {
     width: 100%;
     overflow: hidden;
     user-select: none;
+    position: relative;
     .timeLineBox {
         height: 60px;
         background: #ddd;
