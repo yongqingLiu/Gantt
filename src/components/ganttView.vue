@@ -1,17 +1,17 @@
 <template>
-    <div class="ganttItemView">
-        <div
-            @click="clickGanttItem"
-            class="ganttItem"
-            :flightid="flightDetail.id"
-            :style="{
-                width: genttViewPositionValue.widht,
-                left: genttViewPositionValue.left,
-                top: flightDetail.positionValue.level === 1 ? '5px' : flightDetail.positionValue.top + 'px',
-            }"
-        >
+    <div
+        class="ganttItemView"
+        :style="{
+            width: genttViewPositionValue.widht,
+            left: genttViewPositionValue.left,
+            top: flightDetail.positionValue.level === 1 ? '5px' : flightDetail.positionValue.top + 'px',
+        }"
+    >
+        <!-- <label>ZBAA</label> -->
+        <div @click="clickGanttItem" class="ganttItem" :flightid="flightDetail.id">
             {{ flightDetail.flightNo }}
         </div>
+        <!-- <label>ZSPD</label> -->
     </div>
 </template>
 <script>
@@ -53,14 +53,30 @@ export default {
 </script>
 <style lang="scss" scoped>
 .ganttItemView {
-    .ganttItem {
     position: absolute;
+    .ganttItem {
         background: #22a3fe;
         height: 20px;
         line-height: 20px;
         text-align: center;
         font-size: 14px;
         cursor: move;
+    }
+    > label {
+        line-height: 20px;
+        position: absolute;
+        display: inline-block;
+        height: 20px;
+    }
+    > label:nth-of-type(1) {
+        left: 0;
+        transform: translateX(-100%);
+    }
+    > label:nth-of-type(2) {
+        top: 0;
+        right: 0;
+
+        transform: translateX(100%);
     }
     .selectGanttItem {
         border: 4px solid red;

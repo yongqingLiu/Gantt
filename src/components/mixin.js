@@ -10,21 +10,19 @@
 // 5、移除监听事件，从新计算位置
 // 当前bug  如果时间相同，拖拽会重叠
 
-
-
 // 主要为拖动功能
 import cloneDeep from "lodash/cloneDeep";
 export default {
     data() {
         return {
             scrollTop: 0,
+            scrollLeft: 0,
             anttWrap: null,
             cloneArr: [],
             currentEvent: null,
             cloneNode: null,
             cloneNodeArr: [],
             cloneNodePositionArr: [],
-            currentNodeTop: 0,
             currentIndex: "auto",
             currentFlightList: [],
             isMouseMove: false,
@@ -34,7 +32,8 @@ export default {
     methods: {
         // 甘特图内容滚动事件
         GanttScroll() {
-            this.scrollTop = this.$refs.Gantt.scrollTop;
+            // this.scrollTop = this.$refs.Gantt.scrollTop;
+            // this.scrollLeft = this.$refs.Gantt.scrollLeft;
             this.leftAcRegStyle.top = -event.target.scrollTop + "px";
             this.timeLineStyle.left = -event.target.scrollLeft + "px";
         },
@@ -122,18 +121,18 @@ export default {
         // 暂时无机型后续再增加
         removeMoveItemAndAddMoveItem(acReg) {
             let arr = [];
-            this.currentFlightList.forEach(item=>{
-                this.ganttList.forEach(acRegList=>{
-                    acRegList.flights.forEach((flight,index)=>{
-                        if(flight.id === item){
+            this.currentFlightList.forEach((item) => {
+                this.ganttList.forEach((acRegList) => {
+                    acRegList.flights.forEach((flight, index) => {
+                        if (flight.id === item) {
                             let tempFlight = cloneDeep(flight);
                             tempFlight.acReg = acReg;
-                            acRegList.flights.splice(index,1)
-                            arr.push(tempFlight)
+                            acRegList.flights.splice(index, 1);
+                            arr.push(tempFlight);
                         }
-                    })
-                })
-            })
+                    });
+                });
+            });
             this.ganttList.forEach((item) => {
                 if (item.acReg === acReg) {
                     item.flights = item.flights.concat(arr);
@@ -174,7 +173,10 @@ export default {
                 let item = cloneItem[i];
                 this.GanttWrap.removeChild(item); // 移除克隆的元素
             }
-            this.calcAcRegOverlap(); // 重新计算位置
+            if (this.cloneNodeArr.length) {
+                this.calcAcRegOverlap(); // 重新计算位置
+            }
+            this.cloneNodeArr = [];
             window.removeEventListener("mousemove", this.moveMethods); // 鼠标松开移除监听事件
             this.currentEvent = null;
             this.GanttWrap.style.cursor = "auto";

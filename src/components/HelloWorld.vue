@@ -45,6 +45,8 @@
                 </div>
             </div>
         </div>
+        <!-- 待排区  待排区功能类似已排区 -->
+        <div class=""></div>
     </div>
 </template>
 
@@ -176,13 +178,14 @@ export default {
                 overlapHandle(item.flights, item);
             });
             // console.log(this.ganttList);
+            this.removeSelectItem()
         },
     },
     mounted() {
         // 获取当前屏幕宽度
         this.currentWindowWidth = document.body.clientWidth - 100;
-        this.timeLineStyle.width = this.initHours * this.hourWidht + "px";// 时间轴宽度
-        this.$refs.ganttItemBox.style.width = this.initHours * this.hourWidht + "px";// 甘特图容器宽度
+        this.timeLineStyle.width = this.initHours * this.hourWidht + "px"; // 时间轴宽度
+        this.$refs.ganttItemBox.style.width = this.initHours * this.hourWidht + "px"; // 甘特图容器宽度
         // 屏幕变化改变每个小时的宽度
         window.onresize = () => {
             this.currentWindowWidth = document.body.clientWidth - 100;
@@ -233,6 +236,7 @@ export default {
     }
     .ganttContentBox {
         height: calc(100% - 60px);
+        overflow: hidden;
         // 机型机号列表
         .leftAcReg {
             width: 100px;
