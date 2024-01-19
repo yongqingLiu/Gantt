@@ -8,7 +8,6 @@
 // 4、鼠标松开
 //     松开后到那个机号，将拖动的元素从原来的删除掉，新增到新的机型机号上面
 // 5、移除监听事件，从新计算位置
-// 当前bug  如果时间相同，拖拽会重叠
 
 // 主要为拖动功能
 import cloneDeep from "lodash/cloneDeep";
@@ -26,7 +25,6 @@ export default {
             currentIndex: "auto",
             currentFlightList: [],
             isMouseMove: false,
-            // selectGanttItemArr: [], // 点击选中的甘特条
         };
     },
     methods: {
@@ -57,7 +55,7 @@ export default {
             cloneItem.style.cursor = "move";
             cloneItem.style.pointerEvents = "auto";
             cloneItem.style.opacity = "0.7";
-            cloneItem.style.zIndex = 100;
+            cloneItem.style.zIndex = 110;
             cloneItem.style.fontSize = "14px";
             cloneItem.style.top = currentPositionValue.top + this.scrollTop + "px";
             cloneItem.style.left = currentPositionValue.left + "px";

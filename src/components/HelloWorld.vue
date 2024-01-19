@@ -15,7 +15,7 @@
         <div class="ganttContentBox">
             <!-- 机型列表 -->
             <div class="leftAcReg" :style="leftAcRegStyle">
-                <div class="acTypeList" v-for="(item, index) in flightData" :key="index">
+                <div :class="['acTypeList',item.sticky?'sticky':'']" v-for="(item, index) in flightData" :key="index">
                     <div class="acType">{{ item.acType }}</div>
                     <div class="acReg">
                         <p v-for="(flight, _index) in item.rows" :key="_index" :style="{ height: flight.overlapNum * 30 + 'px', lineHeight: flight.overlapNum * 30 + 'px' }">
@@ -28,7 +28,7 @@
             <div class="ganttItemBoxWrap" ref="ganttItemBoxWrap" @scroll="GanttScroll($event)">
                 <div ref="ganttItemBox" class="ganttItemBox" id="ganttItemBox">
                     <div class="ganttList">
-                        <div v-for="(item, index) in ganttList" :key="index" :style="{ height: item.overlapNum * 30 + 'px' }">
+                        <div :class="item.sticky ? 'sticky' : ''" v-for="(item, index) in ganttList" :key="index" :style="{ height: item.overlapNum * 30 + 'px' }">
                             <div class="acRegRow" :id="'acRegRow_' + item.acReg" @mouseup="mouseUp($event, item.acReg)">
                                 <!-- 每个甘特条 -->
                                 <GanttView
@@ -178,7 +178,7 @@ export default {
                 overlapHandle(item.flights, item);
             });
             // console.log(this.ganttList);
-            this.removeSelectItem()
+            this.removeSelectItem();
         },
     },
     mounted() {
@@ -242,15 +242,31 @@ export default {
             width: 100px;
             background: #ddd;
             float: left;
+            position: relative;
             .acTypeList {
                 display: flex;
                 justify-content: space-between;
                 .acReg {
                     p {
+                        background-color: #ddd;
                         line-height: 30px;
                         border-bottom: 1px solid #333;
                     }
+                    .sticky {
+                        // 置顶功能
+                        position: sticky;
+                        position: -webkit-sticky;
+                        z-index: 101;
+                        top: 0;
+                    }
                 }
+            }
+            .sticky{
+                 // 置顶功能
+                 position: sticky;
+                        position: -webkit-sticky;
+                        z-index: 101;
+                        top: 0;
             }
         }
         // 甘特图内容
@@ -262,12 +278,21 @@ export default {
                 .ganttList {
                     width: 100%;
                     height: 100%;
+                    position: relative;
+                    .sticky {
+                        // 置顶功能
+                        position: sticky;
+                        position: -webkit-sticky;
+                        z-index: 101;
+                        top: 0;
+                    }
                     > div {
                         height: 30px;
                         line-height: 30px;
                         width: 100%;
                         border-bottom: 1px solid #ddd;
                         overflow: hidden;
+                        background: #fff;
                         .acRegRow {
                             width: 100%;
                             height: 100%;
