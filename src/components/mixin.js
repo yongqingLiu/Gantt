@@ -102,15 +102,19 @@ export default {
             this.isMouseMove = true;
             if (this.isMouseMove) {
                 let event = this.currentEvent; // 当前鼠标点击
+                console.log(event)
                 // let offsetEle_y = event.offsetY; // 当前鼠标点下去后距离当前元素顶部的距离
+                let offsetEle_X = event.offsetX; // 当前鼠标点下去后距离当前元素顶部的距离
                 let evt = ent || window.event; // 拖动的元素
                 let pointY = event.y; // 当前鼠标点击后，鼠标点击点位距离顶部的高度(固定不会变)
                 // let currentMouseClientY = evt.clientY; //  evt.clientY 为当前鼠标距离页面顶部的距离，随着移动不断变化
                 for (let i = 0; i < this.cloneNodeArr.length; i++) {
                     let target = this.cloneNodeArr[i]; // 克隆的元素
                     let ele_top = evt.clientY - pointY + this.cloneNodePositionArr[i];
+                    let ele_left = evt.clientX - offsetEle_X;
                     target.style.pointerEvents = "none";
                     target.style.top = ele_top + "px";
+                    target.style.left = ele_left + "px";
                     this.GanttWrap.style.cursor = "move";
                 }
             }
