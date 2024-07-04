@@ -10,6 +10,7 @@
   "dependencies": {
     "core-js": "^3.8.3",
     "dayjs": "^1.11.10",
+    "element-ui": "^2.15.14",
     "interactjs": "^1.10.26",
     "lodash": "^4.17.21",
     "sortablejs": "^1.15.1",

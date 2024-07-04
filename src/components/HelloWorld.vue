@@ -1,5 +1,9 @@
 <template>
     <div class="gantt" ref="Gantt" @scroll="GanttScroll">
+        <div class="searchBox">
+            <div>高度： <el-slider :min="24" :max="70" v-model="currentHeight" @input="currentHeightChange"></el-slider></div>
+            <div>宽度: <el-slider :min="12" :max="72" v-model="currentWidth" @input="currentWidthChange"></el-slider></div>
+        </div>
         <!-- 时间线 -->
         <div class="timeLineBox">
             <div class="leftTopType">xxxx</div>
@@ -15,11 +19,16 @@
         <div class="ganttContentBox">
             <!-- 机型列表 -->
             <div class="leftAcReg" :style="leftAcRegStyle">
-                <div :class="['acTypeList',item.sticky?'sticky':'']" v-for="(item, index) in flightData" :key="index">
+                <div :class="['acTypeList', item.isSticky ? 'sticky' : '']" :style="{ top: setStickyTop(index, item.isSticky) }" v-for="(item, index) in allGanttData" :key="index">
                     <div class="acType">{{ item.acType }}</div>
                     <div class="acReg">
-                        <p v-for="(flight, _index) in item.rows" :key="_index" :style="{ height: flight.overlapNum * 30 + 'px', lineHeight: flight.overlapNum * 30 + 'px' }">
+                        <p
+                            v-for="(flight, _index) in item.rows"
+                            :key="_index"
+                            :style="{ lineHeight: currentHeight + 'px', height: flight.overlapNum * currentHeight + 'px', lineHeight: flight.overlapNum * currentHeight + 'px' }"
+                        >
                             {{ flight.acReg }}
+                            <span class="setTop" @click="setTopAcReg(item.acType, flight.acReg, _index, item.isSticky, item)">{{ item.isSticky ? "取消" : "置顶" }}</span>
                         </p>
                     </div>
                 </div>
@@ -28,13 +37,19 @@
             <div class="ganttItemBoxWrap" ref="ganttItemBoxWrap" @scroll="GanttScroll($event)">
                 <div ref="ganttItemBox" class="ganttItemBox" id="ganttItemBox">
                     <div class="ganttList">
-                        <div :class="item.sticky ? 'sticky' : ''" v-for="(item, index) in ganttList" :key="index" :style="{ height: item.overlapNum * 30 + 'px' }">
+                        <div
+                            :class="item.isSticky ? 'sticky' : ''"
+                            v-for="(item, index) in ganttList"
+                            :key="index"
+                            :style="{ lineHeight: currentHeight + 'px', height: item.overlapNum * currentHeight + 'px', top: setStickyTop(index, item.isSticky) }"
+                        >
                             <div class="acRegRow" :id="'acRegRow_' + item.acReg" @mouseup="mouseUp($event, item.acReg)">
                                 <!-- 每个甘特条 -->
                                 <GanttView
                                     @clickGanttItem="clickGanttItem"
                                     :initDate="initDateTime"
                                     :hourWidht="hourWidht"
+                                    :currentHeight="currentHeight"
                                     v-for="(flight, _index) in item.flights"
                                     :key="_index"
                                     :flightDetail="flight"
@@ -63,7 +78,10 @@ export default {
 
     data() {
         return {
+            currentHeight: 30,
+            currentWidth: 24,
             currentWindowWidth: 0,
+            setTopArr: [], // 置顶数据
             flightData: [], //请求获取来的数据
             ganttList: [], // 甘特条数据
             // 时间线样式
@@ -86,14 +104,19 @@ export default {
             // 时间轴相关
             timeLineArr: [],
             timeRange: 24, //一屏显示的小时数
-            initHours: 48, // 要展示的小时数，初始化展示48小时
+            initHours: 72, // 要展示的小时数，初始化展示48小时
         };
     },
     computed: {
         hourWidht() {
             // 默认屏幕24小时
-            let width = this.currentWindowWidth / this.timeRange;
+            let width = this.currentWindowWidth / this.currentWidth;
             return width;
+        },
+        allGanttData() {
+            let data = this.setTopArr.concat(this.flightData);
+            data = data.filter((item) => item.rows.length);
+            return data;
         },
     },
     methods: {
@@ -108,7 +131,7 @@ export default {
                 arr.push(hour);
                 before24Hours.setHours(before24Hours.getHours() + 1);
             }
-            for (let i = 0; i < 24; i++) {
+            for (let i = 0; i < this.initHours - 24; i++) {
                 let time = new Date().getTime() + i * 1000 * 60 * 60;
                 let after24Hours = Math.floor(new Date(time).getHours());
                 arr.push(after24Hours);
@@ -118,7 +141,7 @@ export default {
         // 获取机型机号列表和甘特图
         getAcTypeAndAcRegList() {
             this.ganttList = [];
-            let data = this.flightData;
+            let data = this.allGanttData;
             data.forEach((item) => {
                 item.rows.forEach((ele) => {
                     this.ganttList.push(ele);
@@ -129,6 +152,7 @@ export default {
 
         // 计算每个机号是否重叠，重叠了多少层
         calcAcRegOverlap() {
+            let _this = this;
             // 设置开始和结束时间
             function genttViewPositionValue(flight) {
                 let startTime = flight.atd || flight.etd || flight.std || flight.ptd;
@@ -146,7 +170,7 @@ export default {
                     if (list[i + 1] && list[i].positionValue.endTime > list[i + 1].positionValue.startTime) {
                         item.isOverlapFloag = true; // 是否有重叠标志 --- 有
                         list[i + 1].positionValue.endTime = list[i].positionValue.endTime;
-                        list[i + 1].positionValue.top ? (list[i + 1].positionValue.top += 30) : (list[i + 1].positionValue.top = 30);
+                        list[i + 1].positionValue.top ? (list[i + 1].positionValue.top += _this.currentHeight) : (list[i + 1].positionValue.top = _this.currentHeight);
                         list[i + 1].positionValue.level = item.overlapNum + 1; // 当前是第几层
                         arr.push(list[i + 1]);
                     }
@@ -180,20 +204,85 @@ export default {
             // console.log(this.ganttList);
             this.removeSelectItem();
         },
+        // 设置机号置顶/取消置顶功能
+        setTopAcReg(acType, acReg, currentIndex, type, currentRow) {
+            if (type) {
+                let currentRowItem = currentRow.rows[0];
+                currentRowItem.isSticky = false;
+                this.flightData.forEach((item) => {
+                    // 有机型
+                    if (item.acType === acType) {
+                        item.rows.splice(currentRow.rows[0].currentIndex, 0, currentRowItem);
+                    }
+                });
+                this.setTopArr.forEach((item, index) => {
+                    if (item.acType === acType && item.rows[0].acReg === acReg) {
+                        this.setTopArr.splice(index, 1);
+                    }
+                });
+            } else {
+                this.flightData.forEach((item) => {
+                    if (item.acType === acType) {
+                        item.rows.forEach((acRegItem, index) => {
+                            if (acRegItem.acReg === acReg) {
+                                acRegItem.isSticky = true;
+                                acRegItem.currentIndex = currentIndex;
+                                this.setTopArr.push({
+                                    acType: acType,
+                                    isSticky: true,
+                                    rows: [acRegItem],
+                                });
+                                item.rows.splice(index, 1);
+                            }
+                        });
+                    }
+                });
+            }
+            this.getAcTypeAndAcRegList();
+        },
+        // 更新置顶的重叠高度
+        setStickyTop(index, type) {
+            if (type) {
+                if (index === 0) {
+                    return 0;
+                } else {
+                    let arr = this.allGanttData.slice(0, index);
+                    let rowNum = 0;
+                    arr.forEach((item) => {
+                        rowNum += item.rows[0].overlapNum;
+                    });
+                    return rowNum * this.currentHeight + "px";
+                }
+            }
+        },
+        // 设置容器宽高
+        initWrapWidthAndHeight() {
+            this.timeLineStyle.width = this.initHours * this.hourWidht + "px"; // 时间轴宽度
+            this.$refs.ganttItemBox.style.width = this.initHours * this.hourWidht + "px"; // 甘特图容器宽度
+        },
+        // 高度变化时
+        currentHeightChange() {
+            this.getAcTypeAndAcRegList();
+        },
+        // 宽度变化时
+        currentWidthChange() {
+            this.getAcTypeAndAcRegList();
+            this.initWrapWidthAndHeight();
+        },
     },
     mounted() {
         // 获取当前屏幕宽度
-        this.currentWindowWidth = document.body.clientWidth - 100;
-        this.timeLineStyle.width = this.initHours * this.hourWidht + "px"; // 时间轴宽度
-        this.$refs.ganttItemBox.style.width = this.initHours * this.hourWidht + "px"; // 甘特图容器宽度
+        this.currentWindowWidth = document.body.clientWidth - 140;
+        this.initWrapWidthAndHeight();
         // 屏幕变化改变每个小时的宽度
         window.onresize = () => {
-            this.currentWindowWidth = document.body.clientWidth - 100;
+            this.currentWindowWidth = document.body.clientWidth - 140;
             this.timeLineStyle.width = this.initHours * this.hourWidht + "px";
             this.$refs.ganttItemBox.style.width = this.initHours * this.hourWidht + "px";
         };
         this.getCurrentTime();
         this.flightData = JSON.flightList;
+        console.log(this.flightData);
         this.getAcTypeAndAcRegList();
     },
 };
@@ -206,12 +295,20 @@ export default {
     overflow: hidden;
     user-select: none;
     position: relative;
+    .searchBox {
+        height: 80px;
+        display: flex;
+        > div {
+            flex: 1;
+            margin: 0 20px;
+        }
+    }
     .timeLineBox {
         height: 60px;
         background: #ddd;
         display: flex;
         .leftTopType {
-            width: 100px;
+            width: 140px;
             height: 60px;
             position: relative;
             z-index: 100;
@@ -219,14 +316,13 @@ export default {
         }
         .timeLine {
             height: 100%;
-            width: calc(100% - 100px);
+            width: calc(100% - 140px);
             .timeLengthBox {
                 height: 100%;
                 position: relative;
                 p {
                     display: inline-block;
                     height: 100%;
-                    width: 30px;
                     line-height: 30px;
                     box-sizing: border-box;
                     border-right: 1px solid #333;
@@ -235,43 +331,55 @@ export default {
         }
     }
     .ganttContentBox {
-        height: calc(100% - 60px);
+        height: calc(100% - 140px);
         overflow: hidden;
         // 机型机号列表
         .leftAcReg {
-            width: 100px;
+            width: 140px;
             background: #ddd;
             float: left;
             position: relative;
             .acTypeList {
                 display: flex;
                 justify-content: space-between;
+                .acType {
+                    flex: 1;
+                    display: flex;
+                    background-color: #ddd;
+                    align-items: center;
+                    border-bottom: 1px solid #333;
+                    border-right: 1px solid #333;
+                    box-sizing: border-box;
+                    box-sizing: border-box;
+                }
                 .acReg {
+                    width: 90px;
                     p {
                         background-color: #ddd;
-                        line-height: 30px;
+                        box-sizing: border-box;
                         border-bottom: 1px solid #333;
-                    }
-                    .sticky {
-                        // 置顶功能
-                        position: sticky;
-                        position: -webkit-sticky;
-                        z-index: 101;
-                        top: 0;
+                        .setTop {
+                            cursor: pointer;
+                            color: #3e93f5;
+                            font-size: 12px;
+                        }
                     }
                 }
             }
-            .sticky{
-                 // 置顶功能
-                 position: sticky;
-                        position: -webkit-sticky;
-                        z-index: 101;
-                        top: 0;
+            .sticky {
+                // 置顶功能
+                position: sticky;
+                position: -webkit-sticky;
+                z-index: 101;
+                top: 0;
+            }
+            .sticky:not(.sticky :has(+ .sticky)) {
+                box-shadow: 0px 2px 4px #ccc;
             }
         }
         // 甘特图内容
         .ganttItemBoxWrap {
-            width: calc(100% - 100px);
+            width: calc(100% - 140px);
             height: 100%;
             overflow: auto;
             .ganttItemBox {
@@ -283,45 +391,23 @@ export default {
                         // 置顶功能
                         position: sticky;
                         position: -webkit-sticky;
+                        border-bottom: 1px solid #ddd;
                         z-index: 101;
                         top: 0;
                     }
+                    .sticky:not(.sticky :has(+ .sticky)) {
+                        box-shadow: 0px 2px 4px #ccc;
+                    }
                     > div {
-                        height: 30px;
-                        line-height: 30px;
                         width: 100%;
                         border-bottom: 1px solid #ddd;
                         overflow: hidden;
                         background: #fff;
+                        box-sizing: border-box;
                         .acRegRow {
                             width: 100%;
                             height: 100%;
                             position: relative;
-                            .timeCell {
-                                width: 30px;
-                                height: 100%;
-                                line-height: 30px;
-                                float: left;
-                            }
-                            .flightItem {
-                                height: 30px;
-                                width: 200px;
-                                background: #3e93f5;
-                                position: absolute;
-                                left: 200px;
-                                top: 5px;
-                                &:hover {
-                                    cursor: move;
-                                }
-                            }
-                            .flightItem2 {
-                                height: 30px;
-                                width: 200px;
-                                background: #3e93f5;
-                                position: absolute;
-                                left: 500px;
-                                top: 5px;
-                            }
                         }
                     }
                 }

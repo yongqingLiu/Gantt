@@ -8,7 +8,7 @@
         }"
     >
         <!-- <label>ZBAA</label> -->
-        <div @click="clickGanttItem" class="ganttItem" :flightid="flightDetail.id">
+        <div @click="clickGanttItem" class="ganttItem" :flightid="flightDetail.id" :style="{ height: currentGantItemtHeight + 'px',lineHeight:currentGantItemtHeight+'px'}">
             {{ flightDetail.flightNo }}
         </div>
         <!-- <label>ZSPD</label> -->
@@ -21,9 +21,12 @@ export default {
         hourWidht: Number,
         flightDetail: Object,
         positionValue: Object,
+        currentHeight:Number
     },
-
     computed: {
+        currentGantItemtHeight(){
+            return this.currentHeight - 10
+        },
         genttViewPositionValue() {
             let width = 0;
             let left = 0;
@@ -56,8 +59,6 @@ export default {
     position: absolute;
     .ganttItem {
         background: #22a3fe;
-        height: 20px;
-        line-height: 20px;
         text-align: center;
         font-size: 14px;
         cursor: move;
