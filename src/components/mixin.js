@@ -29,11 +29,16 @@ export default {
     },
     methods: {
         // 甘特图内容滚动事件
-        GanttScroll() {
+        GanttScroll(event) {
             // this.scrollTop = this.$refs.Gantt.scrollTop;
             // this.scrollLeft = this.$refs.Gantt.scrollLeft;
             this.leftAcRegStyle.top = -event.target.scrollTop + "px";
             this.timeLineStyle.left = -event.target.scrollLeft + "px";
+            this.$refs.waittingGanttItemBoxWrap.scrollLeft = event.target.scrollLeft;
+        },
+        waittingGanttScroll(event) {
+            this.WaittingLeftAcRegStyle.top = -event.target.scrollTop + "px";
+            this.$refs.ganttItemBoxWrap.scrollLeft = event.target.scrollLeft;
         },
 
         mouseUp(event, acReg) {

@@ -82,7 +82,8 @@ export default {
     .selectGanttItem {
         border: 4px solid red;
         height: 12px;
-        line-height: 12px;
+        line-height: 14px!important;
+        box-sizing: border-box;
     }
 }
 </style>

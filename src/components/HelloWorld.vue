@@ -16,7 +16,7 @@
             </div>
         </div>
         <!-- 甘特图内容 -->
-        <div class="ganttContentBox">
+        <div class="ganttContentBox" :style="{ height: `calc(100% - 140px - ${waittingGanttContentBoxHeight}px)` }">
             <!-- 机型列表 -->
             <div class="leftAcReg" :style="leftAcRegStyle">
                 <div :class="['acTypeList', item.isSticky ? 'sticky' : '']" :style="{ top: setStickyTop(index, item.isSticky) }" v-for="(item, index) in allGanttData" :key="index">
@@ -44,7 +44,6 @@
                             :style="{ lineHeight: currentHeight + 'px', height: item.overlapNum * currentHeight + 'px', top: setStickyTop(index, item.isSticky) }"
                         >
                             <div class="acRegRow" :id="'acRegRow_' + item.acReg" @mouseup="mouseUp($event, item.acReg)">
-                                <!-- 每个甘特条 -->
                                 <GanttView
                                     @clickGanttItem="clickGanttItem"
                                     :initDate="initDateTime"
@@ -61,7 +60,64 @@
             </div>
         </div>
         <!-- 待排区  待排区功能类似已排区 -->
-        <div class=""></div>
+        <div class="waittingGanttContentBox" :style="{ height: waittingGanttContentBoxHeight + 'px' }">
+            <div class="resizeHandle" @mousedown="handleWaittingGantt">
+                <span :class="['isExpandWaitting', isExpandWaitting ? 'expandGanttWaiting' : '']" @click="expandWaittingGantt"></span>
+            </div>
+            <div class="waittingGantContent">
+                <!-- 机型列表 -->
+                <div class="leftAcReg" :style="WaittingLeftAcRegStyle">
+                    <div
+                        :class="['acTypeList', item.isSticky ? 'sticky' : '']"
+                        :style="{ top: setStickyTop(index, item.isSticky) }"
+                        v-for="(item, index) in allGanttData"
+                        :key="index"
+                    >
+                        <div class="acType">{{ item.acType }}</div>
+                        <div class="acReg">
+                            <p
+                                v-for="(flight, _index) in item.rows"
+                                :key="_index"
+                                :style="{
+                                    lineHeight: currentHeight + 'px',
+                                    height: flight.overlapNum * currentHeight + 'px',
+                                    lineHeight: flight.overlapNum * currentHeight + 'px',
+                                }"
+                            >
+                                {{ flight.acReg }}
+                                <!-- <span class="setTop" @click="setTopAcReg(item.acType, flight.acReg, _index, item.isSticky, item)">{{ item.isSticky ? "取消" : "置顶" }}</span> -->
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <!-- 内容 -->
+                <div class="ganttItemBoxWrap" ref="waittingGanttItemBoxWrap" @scroll="waittingGanttScroll($event)">
+                    <div ref="waittingGanttItemBox" class="ganttItemBox" id="waittingGanttItemBox">
+                        <div class="ganttList">
+                            <div
+                                :class="item.isSticky ? 'sticky' : ''"
+                                v-for="(item, index) in ganttList"
+                                :key="index"
+                                :style="{ lineHeight: currentHeight + 'px', height: item.overlapNum * currentHeight + 'px', top: setStickyTop(index, item.isSticky) }"
+                            >
+                                <div class="acRegRow" :id="'acRegRow_' + item.acReg" @mouseup="mouseUp($event, item.acReg)">
+                                    <!-- 每个甘特条 -->
+                                    <GanttView
+                                        @clickGanttItem="clickGanttItem"
+                                        :initDate="initDateTime"
+                                        :hourWidht="hourWidht"
+                                        :currentHeight="currentHeight"
+                                        v-for="(flight, _index) in item.flights"
+                                        :key="_index"
+                                        :flightDetail="flight"
+                                    ></GanttView>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -78,8 +134,8 @@ export default {
 
     data() {
         return {
-            currentHeight: 30,
-            currentWidth: 24,
+            currentHeight: 30, // 拖动缩放甘特条大小
+            currentWidth: 24, // 拖动缩放甘特条大小
             currentWindowWidth: 0,
             setTopArr: [], // 置顶数据
             flightData: [], //请求获取来的数据
@@ -95,16 +151,18 @@ export default {
                 position: "relative",
                 top: 0,
             },
+            WaittingLeftAcRegStyle: {
+                position: "relative",
+                top: 0,
+            },
             // 初始化最左侧时间
             initDateTime: 0,
-            //  当前机型机号对象
-            acTypeObj: {},
-            // 当前机号列表
-            acRegList: [],
             // 时间轴相关
             timeLineArr: [],
             timeRange: 24, //一屏显示的小时数
             initHours: 72, // 要展示的小时数，初始化展示48小时
+            waittingGanttContentBoxHeight: 10, // 待排区相关信息
+            isExpandWaitting: false,
         };
     },
     computed: {
@@ -118,6 +176,9 @@ export default {
             data = data.filter((item) => item.rows.length);
             return data;
         },
+        // waittingGantData(){
+
+        // }
     },
     methods: {
         // 获取当前时间轴
@@ -259,15 +320,70 @@ export default {
         initWrapWidthAndHeight() {
             this.timeLineStyle.width = this.initHours * this.hourWidht + "px"; // 时间轴宽度
             this.$refs.ganttItemBox.style.width = this.initHours * this.hourWidht + "px"; // 甘特图容器宽度
+            this.$refs.waittingGanttItemBox.style.width = this.initHours * this.hourWidht + "px"; // 待排区甘特图容器宽度
         },
-        // 高度变化时
+        // 调整刻度高度变化时
         currentHeightChange() {
             this.getAcTypeAndAcRegList();
         },
-        // 宽度变化时
+        // 调整刻度宽度变化时
         currentWidthChange() {
             this.getAcTypeAndAcRegList();
             this.initWrapWidthAndHeight();
+        },
+        // 待排区相关方法===========================================================================
+        // 点击展开关闭待排区
+        expandWaittingGantt() {
+            if (this.isExpandWaitting) {
+                this.waittingGanttContentBoxHeight = 10;
+                this.isExpandWaitting = false;
+            } else {
+                this.waittingGanttContentBoxHeight = 300;
+                this.isExpandWaitting = true;
+            }
+        },
+
+        // 待排区上下拖动
+        handleWaittingGantt() {
+            document.onselectstart = () => false;
+            document.ondragstart = () => false;
+            // 绑定鼠标移动事件
+            document.addEventListener("mousemove", this.handleMouseMove);
+            // 绑定鼠标放开事件
+            document.addEventListener("mouseup", this.handleMouseUp);
+        },
+        handleMouseMove(event) {
+            // 最小高度
+            const minHeight = 10;
+            // 最大高度  距离顶部100
+            const maxHeight = document.documentElement.clientHeight - 200;
+            // 最后高度
+            let box_height = document.documentElement.clientHeight - event.clientY;
+
+            if (box_height <= minHeight) {
+                box_height = minHeight;
+            } else if (box_height > maxHeight) {
+                box_height = maxHeight;
+            }
+            if (box_height === minHeight) {
+                this.isExpandWaitting = false;
+            } else {
+                this.isExpandWaitting = true;
+            }
+            this.waittingGanttContentBoxHeight = box_height;
+        },
+        // up 事件
+        handleMouseUp() {
+            // 移除鼠标移动事件
+            document.removeEventListener("mousemove", this.handleMouseMove);
+            // 移除鼠标放开事件
+            document.removeEventListener("mouseup", this.handleMouseUp);
+            // 允许用户选择网页中文字
+            document.onselectstart = null;
+            // 允许用户拖动元素
+            document.ondragstart = null;
+            //记录高度   或者用localStorage 记录   （在初始加载的时候  把 boxHeight 赋值 记录的高度）
+            // this.Storage.set('bottomResultHeight',this.bottomResultHeight)
         },
     },
     mounted() {
@@ -330,15 +446,15 @@ export default {
             }
         }
     }
-    .ganttContentBox {
-        height: calc(100% - 140px);
+    .ganttContentBox,
+    .waittingGanttContentBox {
+        height: calc(100% - 240px);
         overflow: hidden;
         // 机型机号列表
         .leftAcReg {
             width: 140px;
             background: #ddd;
             float: left;
-            position: relative;
             .acTypeList {
                 display: flex;
                 justify-content: space-between;
@@ -412,6 +528,35 @@ export default {
                     }
                 }
             }
+        }
+    }
+    .waittingGanttContentBox {
+        overflow: visible;
+        .resizeHandle {
+            height: 10px;
+            width: 100%;
+            position: relative;
+            background: #bbb;
+            top: 0;
+            cursor: n-resize;
+            .isExpandWaitting {
+                position: absolute;
+                top: -26px;
+                left: 50%;
+                cursor: pointer;
+                border: 14px solid transparent;
+                border-bottom-color: #bbb;
+            }
+            .expandGanttWaiting {
+                border: 14px solid transparent;
+                border-top-color: #bbb;
+                top: 10px;
+                z-index: 1;
+            }
+        }
+        .waittingGantContent {
+            overflow: hidden;
+            height: calc(100% - 10px);
         }
     }
 }
