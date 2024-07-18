@@ -59,6 +59,8 @@ export default {
     position: absolute;
     .ganttItem {
         background: #22a3fe;
+        border-radius: 2px;
+        box-shadow: 0 1px 1px 1px #ddd;
         text-align: center;
         font-size: 14px;
         cursor: move;

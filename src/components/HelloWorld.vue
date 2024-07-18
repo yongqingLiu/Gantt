@@ -19,7 +19,12 @@
         <div class="ganttContentBox" :style="{ height: `calc(100% - 140px - ${waittingGanttContentBoxHeight}px)` }">
             <!-- 机型列表 -->
             <div class="leftAcReg" :style="leftAcRegStyle">
-                <div :class="['acTypeList', item.isSticky ? 'sticky' : '']" :style="{ top: setStickyTop(index, item.isSticky) }" v-for="(item, index) in allGanttData" :key="index">
+                <div
+                    :class="['acTypeList', item.isSticky ? 'sticky' : '']"
+                    :style="{ top: setStickyTop(index, item.isSticky) }"
+                    v-for="(item, index) in acTypeGanttData"
+                    :key="index"
+                >
                     <div class="acType">{{ item.acType }}</div>
                     <div class="acReg">
                         <p
@@ -70,7 +75,7 @@
                     <div
                         :class="['acTypeList', item.isSticky ? 'sticky' : '']"
                         :style="{ top: setStickyTop(index, item.isSticky) }"
-                        v-for="(item, index) in allGanttData"
+                        v-for="(item, index) in waittingAcTypeGantData"
                         :key="index"
                     >
                         <div class="acType">{{ item.acType }}</div>
@@ -96,7 +101,7 @@
                         <div class="ganttList">
                             <div
                                 :class="item.isSticky ? 'sticky' : ''"
-                                v-for="(item, index) in ganttList"
+                                v-for="(item, index) in waittingGanttList"
                                 :key="index"
                                 :style="{ lineHeight: currentHeight + 'px', height: item.overlapNum * currentHeight + 'px', top: setStickyTop(index, item.isSticky) }"
                             >
@@ -139,7 +144,9 @@ export default {
             currentWindowWidth: 0,
             setTopArr: [], // 置顶数据
             flightData: [], //请求获取来的数据
-            ganttList: [], // 甘特条数据
+            allGanttList: [], // 所有甘特条数据
+            ganttList: [], // 已排区甘特图数据
+            waittingGanttList: [], // 待排区甘特条数据
             // 时间线样式
             timeLineStyle: {
                 position: "relative",
@@ -171,14 +178,21 @@ export default {
             let width = this.currentWindowWidth / this.currentWidth;
             return width;
         },
-        allGanttData() {
+        allActypeGanttData() {
             let data = this.setTopArr.concat(this.flightData);
             data = data.filter((item) => item.rows.length);
             return data;
         },
-        // waittingGantData(){
-
-        // }
+        acTypeGanttData() {
+            let data = this.setTopArr.concat(this.flightData.filter((item) => item.ganttType !== "waitting"));
+            data = data.filter((item) => item.rows.length);
+            return data;
+        },
+        waittingAcTypeGantData() {
+            let data = this.flightData.filter((item) => item.ganttType == "waitting");
+            data = data.filter((item) => item.rows.length);
+            return data;
+        },
     },
     methods: {
         // 获取当前时间轴
@@ -201,11 +215,18 @@ export default {
         },
         // 获取机型机号列表和甘特图
         getAcTypeAndAcRegList() {
+            this.allGanttList = [];
             this.ganttList = [];
-            let data = this.allGanttData;
+            this.waittingGanttList = [];
+            let data = this.allActypeGanttData;
             data.forEach((item) => {
                 item.rows.forEach((ele) => {
-                    this.ganttList.push(ele);
+                    this.allGanttList.push(ele);
+                    if (item.ganttType === "waitting") {
+                        this.waittingGanttList.push(ele);
+                    } else {
+                        this.ganttList.push(ele);
+                    }
                 });
             });
             this.calcAcRegOverlap();
@@ -248,7 +269,7 @@ export default {
                 }
             }
 
-            this.ganttList.forEach((item) => {
+            this.allGanttList.forEach((item) => {
                 item.isOverlapFloag = false; // 是否有重叠的标准 --- 没有
                 item.overlapNum = 1;
                 item.flights.forEach((flight) => {
@@ -397,7 +418,10 @@ export default {
             this.$refs.ganttItemBox.style.width = this.initHours * this.hourWidht + "px";
         };
         this.getCurrentTime();
-        this.flightData = JSON.flightList;
+        let ganttData = JSON.flightList;
+        let waittingGanttData = JSON.flightListNon;
+        waittingGanttData.forEach((item) => (item.ganttType = "waitting"));
+        this.flightData = ganttData.concat(waittingGanttData);
         console.log(this.flightData);
         this.getAcTypeAndAcRegList();
     },
