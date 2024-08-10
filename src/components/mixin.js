@@ -23,11 +23,41 @@ export default {
             cloneNodeArr: [],
             cloneNodePositionArr: [],
             currentIndex: "auto",
-            currentFlightList: [],
+            currentFlightIdList: [], // 当前移动的甘特条的航班id
             isMouseMove: false,
+            isGanttItemFlag: false, // 是否是甘特条
+            isGanttItemMoveFlag: false, // 是否是甘特条移动
+            changeFlightGanttList: [], // 拖动改变的航班甘特条数据
+            initChangeFlightGanttList: [], // 拖动改变的航班甘特条数据(用作航班调整记录机号等相关信息)
         };
     },
     methods: {
+        // 滚动函数
+        scrollToElement(element, scrollContainer) {
+            // 确保传入的element是DOM元素
+            if (!(element instanceof HTMLElement)) {
+                console.error("The element must be a DOM element.");
+                return;
+            }
+            // 确保传入的scrollContainer是DOM元素
+            if (!(scrollContainer instanceof HTMLElement)) {
+                console.error("The scrollContainer must be a DOM element.");
+                return;
+            }
+            // 获取子元素的矩形位置信息
+            const elementRect = element.getBoundingClientRect();
+            // 计算子元素的中心位置
+            const elementMiddle = elementRect.top + elementRect.height / 2;
+            const elementLeft = elementRect.left + elementRect.width / 2;
+            // 获取滚动容器的scrollTop和高度
+            const { scrollTop, clientHeight, scrollLeft, clientWidth } = scrollContainer;
+            // 计算滚动位置，使得子元素的中心与滚动容器的中心对齐
+            const scrollToPositionTop = elementMiddle - clientHeight / 2 + scrollTop;
+            const scrollToPositionLeft = elementLeft - clientWidth / 2 + scrollLeft;
+            // 滚动到计算出的位置
+            scrollContainer.scrollTop = scrollToPositionTop;
+            scrollContainer.scrollLeft = scrollToPositionLeft;
+        },
         // 甘特图内容滚动事件
         GanttScroll(event) {
             // this.scrollTop = this.$refs.Gantt.scrollTop;
@@ -50,16 +80,17 @@ export default {
             let currentEle = currentEventTarget;
             let cloneItem = currentEle.cloneNode(true);
             cloneItem.dragOrigin = currentEle;
+            console.log(cloneItem);
             let currentPositionValue = currentEle.getBoundingClientRect();
             cloneItem.classList.add("cloneItem");
             cloneItem.classList.remove("selectGanttItem");
             cloneItem.style.width = currentPositionValue.width + "px"; // 克隆出来的元素的宽高
             cloneItem.style.height = currentPositionValue.height + "px"; // 克隆出来的元素的宽高
             cloneItem.style.position = "absolute";
-            cloneItem.style.backgroundColor = "#22a3fe";
+            // cloneItem.style.backgroundColor = "#22a3fe";
             cloneItem.style.cursor = "move";
             cloneItem.style.pointerEvents = "auto";
-            cloneItem.style.opacity = "0.7";
+            cloneItem.style.opacity = "0.76";
             cloneItem.style.zIndex = 110;
             cloneItem.style.fontSize = "14px";
             cloneItem.style.top = currentPositionValue.top + this.scrollTop + "px";
@@ -69,25 +100,36 @@ export default {
 
             return cloneItem;
         },
-
+        // 校验甘特条能否拖动
+        limitGanttItemMoveRule(flight) {
+            let flag = true;
+            if (flight.waitingStatus === "MAINTAIN") {
+                this.$message.warning("不可拖动！");
+                flag = false;
+            }
+            return flag;
+        },
         // 鼠标移动的时候克隆元素
         handleSelectedItem(element) {
             let cloneNode = this.cloneCurrentItem(element);
-            this.currentFlightList.push(cloneNode.getAttribute("flightid"));
+            this.currentFlightIdList.push(cloneNode.getAttribute("flightid"));
             this.cloneNode = cloneNode;
             //
             this.currentNodeTop = this.currentEvent.target.offsetTop;
             // 将克隆的元素放到数组里
             this.cloneNodeArr.push(cloneNode);
         },
-        // 鼠标移动方法
-        moveMethods(ent) {
+        // 鼠标移动方法 （主要方法）
+        mouseMoveMethods(ent) {
+            // console.log('move')
             if (!this.isMouseMove) {
                 let selectGanttItemArr = [];
-                // 选择了但是没有拖动选择的
+
                 if (this.currentEvent.target.classList.contains("selectGanttItem")) {
+                    // 选择高亮后拖动
                     selectGanttItemArr = document.querySelectorAll(".selectGanttItem");
                 } else {
+                    // 点击直接拖动
                     selectGanttItemArr = [this.currentEvent.target];
                 }
                 // 选择后拖动
@@ -96,7 +138,7 @@ export default {
                         this.handleSelectedItem(item);
                     });
                 } else {
-                    // 未选择直接拖动
+                    // 未选择直接拖动 ???------- 应该走不到这一步
                     this.handleSelectedItem(this.currentEvent.target);
                 }
                 // 记录每个元素的初始化 Y 轴的位置
@@ -109,71 +151,147 @@ export default {
                 let event = this.currentEvent; // 当前鼠标点击
                 // console.log(event)
                 // let offsetEle_y = event.offsetY; // 当前鼠标点下去后距离当前元素顶部的距离
-                // let offsetEle_X = event.offsetX; // 当前鼠标点下去后距离当前元素顶部的距离
+                // let offsetEle_X = event.offsetX; // 当前鼠标点下去后距离当前元素顶部的距离   ---横向移动
                 let evt = ent || window.event; // 拖动的元素
                 let pointY = event.y; // 当前鼠标点击后，鼠标点击点位距离顶部的高度(固定不会变)
                 // let currentMouseClientY = evt.clientY; //  evt.clientY 为当前鼠标距离页面顶部的距离，随着移动不断变化
                 for (let i = 0; i < this.cloneNodeArr.length; i++) {
                     let target = this.cloneNodeArr[i]; // 克隆的元素
                     let ele_top = evt.clientY - pointY + this.cloneNodePositionArr[i];
-                    // let ele_left = evt.clientX - offsetEle_X; // 横向移动
+                    // let ele_left = evt.clientX - offsetEle_X; // ---横向移动
                     target.style.pointerEvents = "none";
                     target.style.top = ele_top + "px";
-                    // target.style.left = ele_left + "px"; // 横向移动
+                    // target.style.left = ele_left + "px"; // ---横向移动
                     this.GanttWrap.style.cursor = "move";
                 }
+                this.isGanttItemMoveFlag = true;
             }
         },
         // 删除拖动的元素并且将拖动的元素放到新的机型里面
         // 暂时无机型后续再增加
         removeMoveItemAndAddMoveItem(acReg) {
             let arr = [];
-            this.currentFlightList.forEach((item) => {
-                this.ganttList.forEach((acRegList) => {
+            this.currentFlightIdList.forEach((item) => {
+                this.allAcRegGanttList.forEach((acRegList) => {
                     acRegList.flights.forEach((flight, index) => {
-                        if (flight.id === item) {
+                        if (flight.id === item && flight.acReg !== acReg) {
+                            if (!this.limitGanttItemMoveRule(flight)) return;
+                            // 拖动的航班id匹配，切更换机号
                             let tempFlight = cloneDeep(flight);
+                            if (!tempFlight.isChange) {
+                                // 还没有改变的时候记录下初始的机号
+                                tempFlight.initAcReg = tempFlight.acReg;
+                            }
                             tempFlight.acReg = acReg;
+                            tempFlight.isChange = true; // 拖动航班改变了
+                            if (tempFlight.initAcReg === acReg) {
+                                // console.log("拖到初始的机号上了");
+                                tempFlight.isChange = false; // 拖动航班未改变
+                            }
                             acRegList.flights.splice(index, 1);
                             arr.push(tempFlight);
                         }
                     });
                 });
             });
-            this.ganttList.forEach((item) => {
+            if (!arr.length) return;
+            this.allAcRegGanttList.forEach((item) => {
                 if (item.acReg === acReg) {
                     item.flights = item.flights.concat(arr);
                 }
             });
+            this.changeFlightGanttList = this.filterChangeFlightGanttList(arr);
+            this.initChangeFlightGanttList = cloneDeep(this.changeFlightGanttList);
+            // console.log(this.changeFlightGanttList);
         },
-        // 移除选中元素
-        removeSelectItem() {
-            let allElement = document.querySelectorAll(".ganttItem") || [];
-            for (let i = 0; i < allElement.length; i++) {
-                allElement[i].classList.remove("selectGanttItem");
+        // 过滤变更的元素
+        filterChangeFlightGanttList(arr) {
+            if (!this.changeFlightGanttList.length) {
+                return arr;
             }
+            let tempFlightArr = cloneDeep(this.changeFlightGanttList);
+            // 遍历改变的甘特条，如果新的和已有的甘特条id相同则替换，最后去除没有改变的
+            tempFlightArr.forEach((item, index) => {
+                arr.forEach((flight, _index) => {
+                    if (flight.id === item.id) {
+                        tempFlightArr[index] = flight;
+                        arr[_index].isInvalidFlag = true; // 将相同的元素打上标记去除
+                    }
+                });
+            });
+            arr = arr.filter((item) => !item.isInvalidFlag);
+            tempFlightArr = tempFlightArr.filter((item) => item.isChange).concat(arr);
+            return tempFlightArr;
         },
-        // 鼠标点击事件（高亮选择）
-        clickGanttItem(event) {
-            let ctrlKeyFlag = event.ctrlKey; // 判断ctrl 是否按下
-            if (!ctrlKeyFlag) {
-                this.removeSelectItem();
+        // 计算每个机号是否重叠，重叠了多少层
+        calcAcRegOverlap() {
+            // let _this = this;
+            // 设置开始和结束时间
+            function genttViewPositionValue(flight) {
+                let startTime = flight.atd || flight.etd || flight.std || flight.ptd || flight.depTime;
+                let endTime = flight.ata || flight.eta || flight.sta || flight.pta || flight.arrTime;
+                return {
+                    startTime: new Date(startTime).getTime(),
+                    endTime: new Date(endTime).getTime(),
+                };
             }
-            let element = event.target;
-            element.classList.add("selectGanttItem");
+            // 重叠判断
+            function overlapHandle(list, item) {
+                let arr = [];
+                for (let i = 0; i < list.length; i++) {
+                    // 后一个元素存在，并且后一个元素的开始时间小于前一个的结束时间（说明重叠，标志置为true），后一个元素向下移动高度；
+                    if (list[i + 1] && list[i].positionValue.endTime > list[i + 1].positionValue.startTime) {
+                        item.isOverlapFloag = true; // 是否有重叠标志 --- 有
+                        list[i + 1].positionValue.endTime = list[i].positionValue.endTime;
+                        // list[i + 1].positionValue.top ? (list[i + 1].positionValue.top += _this.currentHeight) : (list[i + 1].positionValue.top = _this.currentHeight);
+                        list[i + 1].positionValue.level = item.overlapNum + 1; // 当前是第几层
+                        arr.push(list[i + 1]);
+                    }
+                }
+                // 重叠的重新恢复原本起止时间
+                arr.forEach((item) => {
+                    let data = genttViewPositionValue(item);
+                    item.positionValue.startTime = data.startTime;
+                    item.positionValue.endTime = data.endTime;
+                });
+                if (arr.length) {
+                    item.overlapNum += 1;
+                    overlapHandle(arr, item);
+                }
+            }
+            this.allAcRegGanttList.forEach((item) => {
+                item.isOverlapFloag = false; // 是否有重叠的标准 --- 没有
+                item.overlapNum = 1;
+                item.flights.forEach((flight) => {
+                    let data = genttViewPositionValue(flight);
+                    this.$set(flight, "isHeightLight", false); // 添加高亮标志
+                    flight.positionValue = {};
+                    flight.positionValue.startTime = data.startTime;
+                    flight.positionValue.endTime = data.endTime;
+                    flight.positionValue.level = 1; // 当前是第几层
+                });
+                // 排序
+                item.flights = item.flights.sort((a, b) => a.positionValue.startTime - b.positionValue.startTime);
+                overlapHandle(item.flights, item);
+            });
+            // console.log(this.ganttList);
+            // this.removeSelectItem();
         },
-    },
-    mounted() {
-        this.GanttWrap = this.$refs.ganttItemBoxWrap;
-        window.addEventListener("mousedown", (event) => {
-            this.currentFlightList = [];
+
+        // mousedown 事件
+        mousedownMethods(event) {
+            this.currentFlightIdList = [];
             this.cloneNodeArr = [];
             if (event.target.className.indexOf("ganttItem") !== -1) {
                 this.currentEvent = event; // 当前鼠标点击下的元素
-                window.addEventListener("mousemove", this.moveMethods);
+                this.isGanttItemFlag = true;
+                window.addEventListener("mousemove", this.mouseMoveMethods);
             }
-        });
-        window.addEventListener("mouseup", () => {
+        },
+        mouseUpMethods() {
+            window.removeEventListener("mousemove", this.mouseMoveMethods); // 优先移除事件 鼠标松开移除监听事件
+            if (!this.isGanttItemFlag || !this.isGanttItemMoveFlag) return; // 是否是点击在甘特条上
+            // console.log("是否是点击在甘特条上")
             this.isMouseMove = false;
             let cloneItem = document.querySelectorAll(".cloneItem");
             for (let i = 0; i < cloneItem.length; i++) {
@@ -183,12 +301,25 @@ export default {
             if (this.cloneNodeArr.length) {
                 this.calcAcRegOverlap(); // 重新计算位置
             }
-            this.cloneNodeArr = [];
-            window.removeEventListener("mousemove", this.moveMethods); // 鼠标松开移除监听事件
+            // this.cloneNodeArr = [];
             this.currentEvent = null;
             this.GanttWrap.style.cursor = "auto";
-        });
+            this.isGanttItemFlag = false;
+            // console.log("鼠标松开移除监听事件")
+            // console.log(this.isGanttItemFlag)
+            this.isGanttItemMoveFlag = false;
+        },
+    },
+    mounted() {
+        this.GanttWrap = this.$refs.ganttItemBoxWrap;
+        window.addEventListener("mousedown", this.mousedownMethods);
+        window.addEventListener("mouseup", this.mouseUpMethods);
     },
     // 移除监听事件
-    beforeDestroy() {},
+    beforeDestroy() {
+        window.removeEventListener("mousedown", this.mousedownMethods);
+        window.removeEventListener("mouseup", this.mouseUpMethods);
+        clearInterval(this.timer);
+        window.onresize = null;
+    },
 };

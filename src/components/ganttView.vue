@@ -1,14 +1,25 @@
 <template>
     <div
         class="ganttItemView"
+        :id="'flight_' + flightDetail.id || flightDetail.id"
         :style="{
             width: genttViewPositionValue.widht,
             left: genttViewPositionValue.left,
-            top: flightDetail.positionValue.level === 1 ? '5px' : flightDetail.positionValue.top + 'px',
+            top: flightDetail.positionValue.level === 1 ? '5px' : (flightDetail.positionValue.level - 1) * currentHeight + 'px',
         }"
     >
         <!-- <label>ZBAA</label> -->
-        <div @click="clickGanttItem" class="ganttItem" :flightid="flightDetail.id" :style="{ height: currentGantItemtHeight + 'px',lineHeight:currentGantItemtHeight+'px'}">
+        <div
+            @click="clickGanttItem"
+            :class="[
+                'ganttItem',
+                flightDetail.waitingStatus === 'MAINTAIN' ? 'overhaulFlag' : '',// 检修
+                flightDetail.isHeightLight ? 'selectGanttItem' : '',
+                flightDetail.isChange ? 'isChange' : '',
+            ]"
+            :flightid="flightDetail.id"
+            :style="{ height: currentGantItemtHeight + 'px', lineHeight: currentGantItemtHeight + 'px', fontSize: currentGantItemtHeight - 4 + 'px' }"
+        >
             {{ flightDetail.flightNo }}
         </div>
         <!-- <label>ZSPD</label> -->
@@ -21,17 +32,17 @@ export default {
         hourWidht: Number,
         flightDetail: Object,
         positionValue: Object,
-        currentHeight:Number
+        currentHeight: Number,
     },
     computed: {
-        currentGantItemtHeight(){
-            return this.currentHeight - 10
+        currentGantItemtHeight() {
+            return this.currentHeight - 12;
         },
         genttViewPositionValue() {
             let width = 0;
             let left = 0;
-            let startTime = this.flightDetail.atd || this.flightDetail.etd || this.flightDetail.std || this.flightDetail.ptd;
-            let endTime = this.flightDetail.ata || this.flightDetail.eta || this.flightDetail.sta || this.flightDetail.pta;
+            let startTime = this.flightDetail.atd || this.flightDetail.etd || this.flightDetail.std || this.flightDetail.ptd || this.flightDetail.depTime;
+            let endTime = this.flightDetail.ata || this.flightDetail.eta || this.flightDetail.sta || this.flightDetail.pta || this.flightDetail.arrTime;
             width = ((new Date(endTime).getTime() - new Date(startTime).getTime()) / 1000 / 60 / 60) * this.hourWidht;
 
             left = ((new Date(startTime).getTime() - this.initDate) / 1000 / 60 / 60) * this.hourWidht;
@@ -57,14 +68,7 @@ export default {
 <style lang="scss" scoped>
 .ganttItemView {
     position: absolute;
-    .ganttItem {
-        background: #22a3fe;
-        border-radius: 2px;
-        box-shadow: 0 1px 1px 1px #ddd;
-        text-align: center;
-        font-size: 14px;
-        cursor: move;
-    }
+    z-index: 9;
     > label {
         line-height: 20px;
         position: absolute;
@@ -81,11 +85,6 @@ export default {
 
         transform: translateX(100%);
     }
-    .selectGanttItem {
-        border: 4px solid red;
-        height: 12px;
-        line-height: 14px!important;
-        box-sizing: border-box;
-    }
+   
 }
 </style>
