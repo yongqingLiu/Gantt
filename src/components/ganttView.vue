@@ -26,7 +26,7 @@
             <div class="flagIconBox" :style="ganttItemFontSizeStyle">
                 <!-- 新机长 -->
                 <span v-if="flightDetail.newCaptainFlag === 'Y' && checkListProp.indexOf('newCaptainFlag') !== -1" class="iconName newCaptainFlagClass"></span>
-                <!-- 是否换机组 -->
+                <!-- 是否换机组-->
                 <span
                     v-if="flightDetail.crewChangeFlag === 'Y' && checkListProp.indexOf('crewChgFlag') !== -1 && isNotZSNJ(flightDetail)"
                     class="iconName ischangeCrewClass"
