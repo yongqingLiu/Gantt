@@ -54,13 +54,14 @@
                     v-for="(item, index) in acTypeGanttData"
                     :key="index"
                 >
-                    <div class="acType">{{ item.acType }}</div>
+                    <!-- <div class="acType">{{ item.acType }}</div> -->
                     <div class="acReg">
                         <div
                             v-for="(flight, _index) in item.rows"
                             :key="_index"
                             :style="{ lineHeight: currentHeight + 'px', height: flight.overlapNum * currentHeight + 'px', lineHeight: flight.overlapNum * currentHeight + 'px' }"
                         >
+                            <span class="acType">{{ item.acType }}</span>
                             {{ flight.acReg }}
                             <span class="setTop" @click="setTopAcReg(item.acType, flight.acReg, _index, item.isSticky, item)">{{ item.isSticky ? "取消" : "置顶" }}</span>
                         </div>
@@ -107,7 +108,7 @@
                         v-for="(item, index) in waittingAcTypeGantData"
                         :key="index"
                     >
-                        <div class="acType">{{ item.acType }}</div>
+                        <!-- <div class="acType">{{ item.acType }}</div> -->
                         <div class="acReg">
                             <div
                                 v-for="(flight, _index) in item.rows"
@@ -118,6 +119,7 @@
                                     lineHeight: flight.overlapNum * currentHeight + 'px',
                                 }"
                             >
+                                <span class="acType">{{ item.acType }}</span>
                                 {{ flight.acReg }}
                                 <!-- <span class="setTop" @click="setTopAcReg(item.acType, flight.acReg, _index, item.isSticky, item)">{{ item.isSticky ? "取消" : "置顶" }}</span> -->
                             </div>
@@ -477,11 +479,14 @@ export default {
             if (!ctrlKeyFlag) {
                 this.removeSelectItem();
             }
-            let element = event.target;
-            if (element.classList.contains("selectGanttItem")) {
-                element.classList.remove("selectGanttItem");
+            let tempTarget = event.target
+            while (tempTarget && !tempTarget.classList.contains("ganttItem")) {
+                tempTarget = tempTarget.parentNode;
+            }
+            if (tempTarget.classList.contains("selectGanttItem")) {
+                tempTarget.classList.remove("selectGanttItem");
             } else {
-                element.classList.add("selectGanttItem");
+                tempTarget.classList.add("selectGanttItem");
             }
         },
         // 刷新数据
@@ -602,7 +607,7 @@ export default {
             font-weight: bold;
             .acType {
                 display: block;
-                width: 49px;
+                width: 50px;
                 box-sizing: border-box;
                 border-right: 1px solid #a5a5a5;
             }
@@ -687,19 +692,26 @@ export default {
             .acTypeList {
                 display: flex;
                 justify-content: space-between;
-                .acType {
-                    flex: 1;
-                    display: flex;
-                    width: 50px;
-                    align-items: center;
-                    border-bottom: 1px solid #a5a5a5;
-                    border-right: 1px solid #a5a5a5;
-                    background: #fff;
-                    box-sizing: border-box;
-                }
+                // .acType {
+                //     flex: 1;
+                //     display: flex;
+                //     width: 50px;
+                //     align-items: center;
+                //     border-bottom: 1px solid #a5a5a5;
+                //     border-right: 1px solid #a5a5a5;
+                //     background: #fff;
+                //     box-sizing: border-box;
+                // }
                 .acReg {
-                    width: 90px;
+                    width: 140px;
                     background: #fff;
+                    .acType {
+                        display: inline-block;
+                        border-right: 1px solid #a5a5a5;
+                        width: 50px;
+                        float: left;
+                        box-sizing: border-box;
+                    }
                     > div {
                         box-sizing: border-box;
                         border-bottom: 1px solid #a5a5a5;
@@ -808,12 +820,37 @@ export default {
         .isChange {
             background: red;
         }
-        .selectGanttItem {
-            background: #ffbf00;
-        }
-        // 检修
+
+        // 检修,维修计划
         .overhaulFlag {
             background: linear-gradient(180deg, #f3a499 10%, #f0bab3 20%, #f3a499 30%, #f0bab3 40%, #f3a499 50%, #f0bab3 60%, #f3a499 70%, #f0bab3 80%, #f3a499 90%);
+        }
+        // 滑出航班
+        .flightStatus_ROLL_OUT {
+            background: #8fc31f;
+        }
+        // 在飞航班
+        .flightStatus_FLYING {
+            background: #04a180;
+            color: #fff;
+        }
+
+        // 落地未滑入
+
+        // 落地已滑入的航班
+        .flightStatus_ARRIVAL {
+            background: #9b9b9b;
+            color: #fff;
+        }
+        // 取消航班
+        .flightStatus_cancel {
+            background: transparent;
+            color: #333;
+            border: 1px solid #333;
+        }
+        .selectGanttItem {
+            background: #ffbf00;
+            color: #333;
         }
     }
 }

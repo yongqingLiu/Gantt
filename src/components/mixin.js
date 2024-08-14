@@ -80,7 +80,7 @@ export default {
             let currentEle = currentEventTarget;
             let cloneItem = currentEle.cloneNode(true);
             cloneItem.dragOrigin = currentEle;
-            console.log(cloneItem);
+            // console.log(cloneItem);
             let currentPositionValue = currentEle.getBoundingClientRect();
             cloneItem.classList.add("cloneItem");
             cloneItem.classList.remove("selectGanttItem");
@@ -129,18 +129,25 @@ export default {
                     // 选择高亮后拖动
                     selectGanttItemArr = document.querySelectorAll(".selectGanttItem");
                 } else {
-                    // 点击直接拖动
-                    selectGanttItemArr = [this.currentEvent.target];
+                    // 点击直接拖动------
+                    // 点击的如果是 ganttItem 的子元素，则一直网上找，找到 ganttItem 为止
+                    let tempTarget = this.currentEvent.target;
+                    while (tempTarget && !tempTarget.classList.contains("ganttItem")) {
+                        tempTarget = tempTarget.parentNode;
+                    }
+                    // selectGanttItemArr = [this.currentEvent.target];
+                    selectGanttItemArr = [tempTarget];
                 }
                 // 选择后拖动
                 if (selectGanttItemArr.length) {
                     selectGanttItemArr.forEach((item) => {
                         this.handleSelectedItem(item);
                     });
-                } else {
-                    // 未选择直接拖动 ???------- 应该走不到这一步
-                    this.handleSelectedItem(this.currentEvent.target);
                 }
+                // else {
+                //     // 未选择直接拖动 ???------- 应该走不到这一步
+                //     // this.handleSelectedItem(this.currentEvent.target);
+                // }
                 // 记录每个元素的初始化 Y 轴的位置
                 for (let i = 0; i < this.cloneNodeArr.length; i++) {
                     this.cloneNodePositionArr[i] = this.cloneNodeArr[i].getBoundingClientRect().y;
@@ -282,7 +289,8 @@ export default {
         mousedownMethods(event) {
             this.currentFlightIdList = [];
             this.cloneNodeArr = [];
-            if (event.target.className.indexOf("ganttItem") !== -1) {
+            // 如果是子元素
+            if (event.target.className.indexOf("ganttItem") !== -1 || event.target.className.indexOf("flagIconBox") !== -1 || event.target.className.indexOf("iconName") !== -1) {
                 this.currentEvent = event; // 当前鼠标点击下的元素
                 this.isGanttItemFlag = true;
                 window.addEventListener("mousemove", this.mouseMoveMethods);
