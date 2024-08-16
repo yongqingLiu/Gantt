@@ -5,12 +5,12 @@
         :style="{
             width: genttViewPositionValue.widht,
             left: genttViewPositionValue.left,
-            top: flightDetail.positionValue.level === 1 ? '5px' : (flightDetail.positionValue.level - 1) * currentHeight + 'px',
+            top: flightDetail.positionValue.level === 1 ? '3px' : (flightDetail.positionValue.level - 1) * currentHeight + 'px',
         }"
     >
         <label :style="ganttItemStyle">{{ flightDetail.depAirportCnShort ? flightDetail.depAirportCnShort : flightDetail.departureAirport }}</label>
         <div
-            @click="clickGanttItem"
+            @click="clickGanttItem($event, flightDetail)"
             :class="[
                 'ganttItem',
                 flightDetail.waitingStatus === 'MAINTAIN' ? 'overhaulFlag' : '', // 检修
@@ -22,7 +22,7 @@
             :flightid="flightDetail.id"
             :style="ganttItemStyle"
         >
-            {{ flightDetail.flightNo }}
+            {{ flightDetail.flightNoShort }}
             <div class="flagIconBox" :style="ganttItemFontSizeStyle">
                 <!-- 新机长 -->
                 <span v-if="flightDetail.newCaptainFlag === 'Y' && checkListProp.indexOf('newCaptainFlag') !== -1" class="iconName newCaptainFlagClass"></span>
@@ -101,7 +101,7 @@ export default {
             return className;
         },
         currentGantItemtHeight() {
-            return this.currentHeight - 12;
+            return this.currentHeight - 7;
         },
         genttViewPositionValue() {
             let width = 0;
@@ -138,8 +138,8 @@ export default {
         return {};
     },
     methods: {
-        clickGanttItem(event) {
-            this.$emit("clickGanttItem", event);
+        clickGanttItem(event, flightDetail) {
+            this.$emit("clickGanttItem", { event: event, flightDetail: flightDetail });
         },
         isNotZSNJ(data) {
             return data.arrivalAirport !== "ZSNJ" && data.departureAirport !== "ZSNJ";

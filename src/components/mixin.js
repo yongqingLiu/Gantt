@@ -64,6 +64,7 @@ export default {
             // this.scrollLeft = this.$refs.Gantt.scrollLeft;
             this.leftAcRegStyle.top = -event.target.scrollTop + "px";
             this.timeLineStyle.left = -event.target.scrollLeft + "px";
+            if (!this.$refs.waittingGanttItemBoxWrap) return;
             this.$refs.waittingGanttItemBoxWrap.scrollLeft = event.target.scrollLeft;
         },
         waittingGanttScroll(event) {
@@ -74,6 +75,17 @@ export default {
         mouseUp(event, acReg) {
             this.removeMoveItemAndAddMoveItem(acReg);
         },
+        //获取元素距离指定元素的距离
+        getDistanceToElement(currentEle) {
+            const rect1 = currentEle.getBoundingClientRect();
+            const rect2 = this.$refs.Gantt.getBoundingClientRect();
+            // 计算距离 
+            const distance = {
+                top: rect1.bottom - rect2.top - rect1.height - rect2.top,
+                left: rect1.right - rect2.left - rect1.width,
+            };
+            return distance;
+        },
         // 克隆元素
         cloneCurrentItem(currentEventTarget) {
             let parentEle = this.GanttWrap;
@@ -81,11 +93,12 @@ export default {
             let cloneItem = currentEle.cloneNode(true);
             cloneItem.dragOrigin = currentEle;
             // console.log(cloneItem);
-            let currentPositionValue = currentEle.getBoundingClientRect();
+            let currentHeightAndWidth = currentEle.getBoundingClientRect();
+            let currentPositionValue = this.getDistanceToElement(currentEle);
             cloneItem.classList.add("cloneItem");
             cloneItem.classList.remove("selectGanttItem");
-            cloneItem.style.width = currentPositionValue.width + "px"; // 克隆出来的元素的宽高
-            cloneItem.style.height = currentPositionValue.height + "px"; // 克隆出来的元素的宽高
+            cloneItem.style.width = currentHeightAndWidth.width + "px"; // 克隆出来的元素的宽高
+            cloneItem.style.height = currentHeightAndWidth.height + "px"; // 克隆出来的元素的宽高
             cloneItem.style.position = "absolute";
             // cloneItem.style.backgroundColor = "#22a3fe";
             cloneItem.style.cursor = "move";

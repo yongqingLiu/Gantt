@@ -3,7 +3,7 @@
         <div class="searchBox">
             <el-form :inline="true" class="demo-form-inline">
                 <el-form-item>
-                    <el-input v-model="searchText" placeholder="航班号、起降机场"></el-input>
+                    <el-input v-model="searchForm.searchText" placeholder="航班号、起降机场"></el-input>
                 </el-form-item>
 
                 <el-form-item>
@@ -15,7 +15,7 @@
                 </el-form-item>
             </el-form>
             <div class="sliderBox">
-                <div>高度： <el-slider :min="24" :max="70" v-model="currentHeight"></el-slider></div>
+                <div>高度： <el-slider :min="20" :max="70" v-model="currentHeight"></el-slider></div>
                 <div>小时数: <el-slider :min="12" :max="72" v-model="currentWidth" @input="currentWidthChange"></el-slider></div>
             </div>
         </div>
@@ -28,16 +28,16 @@
             <div class="timeLine">
                 <div ref="timeLengthBox" :style="timeLineStyle" class="timeLengthBox">
                     <div class="date">
-                        <div v-for="(value, key, index) in dateTimeArr" :key="index" :style="{ width: value * hourWidht + 'px' }">
+                        <div v-for="(value, key, index) in timeObj.dateTimeArr" :key="index" :style="{ width: value * hourWidht + 'px' }">
                             {{ $dayjs(key).format("YYYY-MM-DD") + "（" + getWeekStr(key) + "）" }}
                         </div>
                     </div>
                     <div class="dateTime">
-                        <div class="dateTime" v-for="(item, index) in timeLineArr" :key="index" :style="{ width: hourWidht + 'px' }">
+                        <div class="dateTime" v-for="(item, index) in timeObj.timeLineArr" :key="index" :style="{ width: hourWidht + 'px' }">
                             {{ hourWidht < 40 ? item.time : item.time + ":00" }}
                             <span class="zeroTimeLine" :style="{ height: zeroTimeLineHeight + 'px' }" v-if="item.time === 0"></span>
-                            <span class="currentTimeLine" :style="{ height: zeroTimeLineHeight + 'px', left: currentTimeLine.left }" v-if="item.current">
-                                <label>{{ currentTimeLine.time }}</label>
+                            <span class="currentTimeLine" :style="{ height: zeroTimeLineHeight + 'px', left: timeObj.currentTimeLine.left }" v-if="item.current">
+                                <label>{{ timeObj.currentTimeLine.time }}</label>
                             </span>
                         </div>
                     </div>
@@ -45,7 +45,7 @@
             </div>
         </div>
         <!-- 甘特图内容 -->
-        <div class="ganttContentBox" :style="{ height: `calc(100% - 140px - ${waittingGanttContentBoxHeight}px)` }">
+        <div class="ganttContentBox" :style="{ height: `calc(100% - 140px - ${waittingGanttObj.waittingGanttContentBoxHeight}px)` }">
             <!-- 机型列表 -->
             <div class="leftAcReg" :style="leftAcRegStyle">
                 <div
@@ -59,7 +59,7 @@
                         <div
                             v-for="(flight, _index) in item.rows"
                             :key="_index"
-                            :style="{ lineHeight: currentHeight + 'px', height: flight.overlapNum * currentHeight + 'px', lineHeight: flight.overlapNum * currentHeight + 'px' }"
+                            :style="{ height: flight.overlapNum * currentHeight + 'px', lineHeight: flight.overlapNum * currentHeight + 'px' }"
                         >
                             <span class="acType">{{ item.acType }}</span>
                             {{ flight.acReg }}
@@ -73,15 +73,16 @@
                 <div ref="ganttItemBox" class="ganttItemBox" id="ganttItemBox">
                     <div class="acRegGanttList">
                         <div
-                            :class="item.isSticky ? 'sticky' : ''"
+                            :class="[item.isSticky ? 'sticky' : '', currentacRegIndexObj.acRegIndex === index ? 'acRegActive' : '']"
                             v-for="(item, index) in acRegGanttList"
                             :key="index"
                             :style="{ lineHeight: currentHeight + 'px', height: item.overlapNum * currentHeight + 'px', top: setStickyTop(index, item.isSticky) }"
+                            @click="acRegClick(index)"
                         >
                             <div class="acRegRow" :id="'acRegRow_' + item.acReg" @mouseup="mouseUp($event, item.acReg)">
                                 <GanttView
                                     @clickGanttItem="clickGanttItem"
-                                    :initDate="initDateTime"
+                                    :initDate="timeObj.initDateTime"
                                     :hourWidht="hourWidht"
                                     :currentHeight="currentHeight"
                                     v-for="(flight, _index) in item.flights"
@@ -92,12 +93,19 @@
                         </div>
                     </div>
                 </div>
+                <!-- 当前甘特条左右两侧线条 -->
+                <!-- <span class="currentItemLeftLine" :style="{ left: currentacRegIndexObj.leftLineStyle.left }" v-if="currentacRegIndexObj.leftLineStyle.left">
+                    <label>{{ currentacRegIndexObj.leftLineStyle.time }}</label>
+                </span>
+                <span class="currentItemRightLine" :style="{ left: currentacRegIndexObj.rightLineStyle.left }" v-if="currentacRegIndexObj.rightLineStyle.left"
+                    ><label>{{ currentacRegIndexObj.rightLineStyle.time }}</label></span
+                > -->
             </div>
         </div>
         <!-- 待排区  待排区功能类似已排区 -->
-        <div class="waittingGanttContentBox" :style="{ height: waittingGanttContentBoxHeight + 'px' }">
+        <div v-if="true" class="waittingGanttContentBox" :style="{ height: waittingGanttObj.waittingGanttContentBoxHeight + 'px' }">
             <div class="resizeHandle" @mousedown="handleWaittingGantt">
-                <span :class="['isExpandWaitting', isExpandWaitting ? 'expandGanttWaiting' : '']" @click="expandWaittingGantt"></span>
+                <span :class="['isExpandWaitting', waittingGanttObj.isExpandWaitting ? 'expandGanttWaiting' : '']" @click="expandWaittingGantt"></span>
             </div>
             <div class="waittingGantContent">
                 <!-- 机型列表 -->
@@ -131,16 +139,17 @@
                     <div ref="waittingGanttItemBox" class="ganttItemBox" id="waittingGanttItemBox">
                         <div class="acRegGanttList">
                             <div
-                                :class="item.isSticky ? 'sticky' : ''"
+                                :class="currentacRegIndexObj.acRegWaittingIndex === index ? 'acRegActive' : ''"
                                 v-for="(item, index) in waittingAcRegGanttList"
                                 :key="index"
                                 :style="{ lineHeight: currentHeight + 'px', height: item.overlapNum * currentHeight + 'px', top: setStickyTop(index, item.isSticky) }"
+                                @click="acRegClick(index, 'waitting')"
                             >
                                 <div class="acRegRow" :id="'acRegRow_' + item.acReg" @mouseup="mouseUp($event, item.acReg)">
                                     <!-- 每个甘特条 -->
                                     <GanttView
                                         @clickGanttItem="clickGanttItem"
-                                        :initDate="initDateTime"
+                                        :initDate="timeObj.initDateTime"
                                         :hourWidht="hourWidht"
                                         :currentHeight="currentHeight"
                                         v-for="(flight, _index) in item.flights"
@@ -170,7 +179,7 @@ export default {
 
     data() {
         return {
-            currentHeight: 30, // 拖动缩放甘特条大小
+            currentHeight: 25, // 拖动缩放甘特条大小
             currentWidth: 24, // 拖动缩放甘特条大小
             currentWindowWidth: 0,
             setTopArr: [], // 置顶机号数据
@@ -193,18 +202,35 @@ export default {
                 position: "relative",
                 top: 0,
             },
-            // 初始化最左侧时间
-            initDateTime: 0,
+            // 行样式 和 甘特条点击线
+            currentacRegIndexObj: {
+                acRegIndex: "",
+                acRegWaittingIndex: "",
+                currentFlight: null,
+                leftLineStyle: {},
+                rightLineStyle: {},
+            },
             timer: null,
-            currentTimeLine: {},
-            timeLineArr: [], // 时间轴小时数
-            dateTimeArr: {}, // 时间轴日期
-            timeRange: 24, //一屏显示的小时数
-            initHours: 72, // 要展示的小时数，初始化展示48小时
-            waittingGanttContentBoxHeight: 10, // 待排区相关信息
-            isExpandWaitting: false,
-            searchText: "",
-            searchFlightList: [], // 查询到的航班
+            // 时间轴刻度相关
+            timeObj: {
+                // 初始化最左侧时间
+                initDateTime: 0,
+                currentTimeLine: {},
+                timeLineArr: [], // 时间轴小时数
+                dateTimeArr: {}, // 时间轴日期
+                timeRange: 24, //一屏显示的小时数
+                initHours: 72, // 要展示的小时数，初始化展示48小时
+            },
+            // 待排区相关信息
+            waittingGanttObj: {
+                waittingGanttContentBoxHeight: 10, // 待排区相关信息
+                isExpandWaitting: false, // 待排区展开关闭
+            },
+            // 查询条件
+            searchForm: {
+                searchText: "",
+                searchFlightList: [], // 查询到的航班
+            },
         };
     },
     computed: {
@@ -248,7 +274,7 @@ export default {
         nextFlight() {},
         // 搜索航班功能
         getFlight() {
-            let text = this.searchText;
+            let text = this.searchForm.searchText;
             if (!text) return;
             let arr = [];
 
@@ -264,7 +290,7 @@ export default {
                 });
             });
             arr = this.sortFlightData(arr);
-            this.searchFlightList = arr;
+            this.searchForm.searchFlightList = arr;
             arr[0].isHeightLight = true;
             let flight = document.getElementById("flight_" + (arr[0].flightId || arr[0].id));
             let scrollBox = document.getElementById("ganttItemBoxWrap");
@@ -303,7 +329,7 @@ export default {
         // 更新当前时间
         updateCurrentTime() {
             let time = new Date().getMinutes();
-            this.currentTimeLine = {
+            this.timeObj.currentTimeLine = {
                 left: (Number(time) / 60) * this.hourWidht + "px",
                 time: this.$dayjs().format("HH:mm"),
             };
@@ -313,22 +339,22 @@ export default {
             let arr = [];
             const now = new Date();
             const before24Hours = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-            this.initDateTime = new Date(this.$dayjs(before24Hours).format("YYYY-MM-DD HH:00")).getTime();
+            this.timeObj.initDateTime = new Date(this.$dayjs(before24Hours).format("YYYY-MM-DD HH:00")).getTime();
             for (let i = 0; i < 24; i++) {
                 const hour = Math.floor(before24Hours.getHours());
                 let date = this.$dayjs(before24Hours).format("YYYY-MM-DD");
-                this.dateTimeArr[date] !== undefined ? (this.dateTimeArr[date] += 1) : (this.dateTimeArr[date] = 1);
+                this.timeObj.dateTimeArr[date] !== undefined ? (this.timeObj.dateTimeArr[date] += 1) : (this.timeObj.dateTimeArr[date] = 1);
                 arr.push({ time: hour });
                 before24Hours.setHours(before24Hours.getHours() + 1);
             }
-            for (let i = 0; i < this.initHours - 24; i++) {
+            for (let i = 0; i < this.timeObj.initHours - 24; i++) {
                 let time = new Date().getTime() + i * 1000 * 60 * 60;
                 let date = this.$dayjs(time).format("YYYY-MM-DD");
-                this.dateTimeArr[date] !== undefined ? (this.dateTimeArr[date] += 1) : (this.dateTimeArr[date] = 1);
+                this.timeObj.dateTimeArr[date] !== undefined ? (this.timeObj.dateTimeArr[date] += 1) : (this.timeObj.dateTimeArr[date] = 1);
                 let after24Hours = Math.floor(new Date(time).getHours());
                 arr.push({ time: after24Hours, current: i === 0 ? true : false });
             }
-            this.timeLineArr = arr;
+            this.timeObj.timeLineArr = arr;
         },
         // 获取机型机号列表和甘特图
         getAcTypeAndAcRegList() {
@@ -403,9 +429,10 @@ export default {
         },
         // 设置容器宽高
         initWrapWidthAndHeight() {
-            this.timeLineStyle.width = this.initHours * this.hourWidht + "px"; // 时间轴宽度
-            this.$refs.ganttItemBox.style.width = this.initHours * this.hourWidht + "px"; // 甘特图容器宽度
-            this.$refs.waittingGanttItemBox.style.width = this.initHours * this.hourWidht + "px"; // 待排区甘特图容器宽度
+            this.timeLineStyle.width = this.timeObj.initHours * this.hourWidht + "px"; // 时间轴宽度
+            this.$refs.ganttItemBox.style.width = this.timeObj.initHours * this.hourWidht + "px"; // 甘特图容器宽度
+            if (!this.$refs.waittingGanttItemBox) return;
+            this.$refs.waittingGanttItemBox.style.width = this.timeObj.initHours * this.hourWidht + "px"; // 待排区甘特图容器宽度
         },
         // 调整刻度宽度变化时
         currentWidthChange() {
@@ -415,12 +442,12 @@ export default {
         // 待排区相关方法===========================================================================
         // 点击展开关闭待排区
         expandWaittingGantt() {
-            if (this.isExpandWaitting) {
-                this.waittingGanttContentBoxHeight = 10;
-                this.isExpandWaitting = false;
+            if (this.waittingGanttObj.isExpandWaitting) {
+                this.waittingGanttObj.waittingGanttContentBoxHeight = 10;
+                this.waittingGanttObj.isExpandWaitting = false;
             } else {
-                this.waittingGanttContentBoxHeight = 300;
-                this.isExpandWaitting = true;
+                this.waittingGanttObj.waittingGanttContentBoxHeight = 300;
+                this.waittingGanttObj.isExpandWaitting = true;
             }
         },
 
@@ -447,11 +474,11 @@ export default {
                 box_height = maxHeight;
             }
             if (box_height === minHeight) {
-                this.isExpandWaitting = false;
+                this.waittingGanttObj.isExpandWaitting = false;
             } else {
-                this.isExpandWaitting = true;
+                this.waittingGanttObj.isExpandWaitting = true;
             }
-            this.waittingGanttContentBoxHeight = box_height;
+            this.waittingGanttObj.waittingGanttContentBoxHeight = box_height;
         },
         // up 事件
         handleMouseUp() {
@@ -474,12 +501,13 @@ export default {
             }
         },
         // 鼠标点击事件（高亮选择）
-        clickGanttItem(event) {
+        clickGanttItem(data) {
+            let { event, flightDetail } = { ...data };
             let ctrlKeyFlag = event.ctrlKey; // 判断ctrl 是否按下
             if (!ctrlKeyFlag) {
                 this.removeSelectItem();
             }
-            let tempTarget = event.target
+            let tempTarget = event.target;
             while (tempTarget && !tempTarget.classList.contains("ganttItem")) {
                 tempTarget = tempTarget.parentNode;
             }
@@ -488,6 +516,36 @@ export default {
             } else {
                 tempTarget.classList.add("selectGanttItem");
             }
+            this.currentacRegIndexObj.currentFlight = flightDetail;
+            // this.setCurrentGanttLineLeftRight(this.currentacRegIndexObj.currentFlight);
+        },
+        // 设置当前点击甘特条左右两侧线
+        setCurrentGanttLineLeftRight(flight) {
+            if (!flight) {
+                this.currentacRegIndexObj.leftLineStyle = {};
+                this.currentacRegIndexObj.rightLineStyle = {};
+                return;
+            }
+            let { endTime, startTime } = { ...flight.positionValue };
+            let left = ((new Date(startTime).getTime() - this.timeObj.initDateTime) / 1000 / 60 / 60) * this.hourWidht;
+            let width = ((new Date(endTime).getTime() - new Date(startTime).getTime()) / 1000 / 60 / 60) * this.hourWidht;
+            let right = left + width;
+            this.currentacRegIndexObj.leftLineStyle = {
+                left: left + "px",
+                time: this.$dayjs(startTime).format("HH:mm"),
+            };
+            this.currentacRegIndexObj.rightLineStyle = {
+                left: right + "px",
+                time: this.$dayjs(endTime).format("HH:mm"),
+            };
+        },
+        // 机号行点击
+        acRegClick(index, type) {
+            if (type === "waitting") {
+                this.currentacRegIndexObj.acRegWaittingIndex = index;
+                return;
+            }
+            this.currentacRegIndexObj.acRegIndex = index;
         },
         // 刷新数据
         reflashData() {
@@ -495,9 +553,9 @@ export default {
         },
         // 更新数据
         upodateFlightData() {
-            this.changeFlightGanttList[0].ata = "2024-08-10T19:00:00.000+08:00";
-            console.log(this.changeFlightGanttList);
-            console.log(this.allAcRegGanttList);
+            // this.changeFlightGanttList[0].ata = "2024-08-10T19:00:00.000+08:00";
+            // console.log(this.changeFlightGanttList);
+            // console.log(this.allAcRegGanttList);
 
             for (let i = 0; i < this.changeFlightGanttList.length; i++) {
                 let changeItem = this.changeFlightGanttList[i];
@@ -540,8 +598,8 @@ export default {
         // 屏幕变化改变每个小时的宽度
         window.onresize = () => {
             this.currentWindowWidth = this.$refs.Gantt.clientWidth - 140;
-            this.timeLineStyle.width = this.initHours * this.hourWidht + "px";
-            this.$refs.ganttItemBox.style.width = this.initHours * this.hourWidht + "px";
+            this.timeLineStyle.width = this.timeObj.initHours * this.hourWidht + "px";
+            this.$refs.ganttItemBox.style.width = this.timeObj.initHours * this.hourWidht + "px";
             this.updateCurrentTime();
         };
         this.getCurrentTime();
@@ -629,6 +687,7 @@ export default {
             .timeLengthBox {
                 height: 100%;
                 position: relative;
+                background: #fff;
                 .date {
                     height: 30px;
                     display: flex;
@@ -655,7 +714,6 @@ export default {
                             position: absolute;
                             z-index: 11;
                             left: -1px;
-                            height: 200px;
                             display: block;
                             width: 2px;
                             top: 30px;
@@ -770,11 +828,27 @@ export default {
                     > div:nth-child(even) {
                         background: #fff;
                     }
-                    > div:hover {
-                        background: #cfe9fc;
+                    > div:hover,
+                    .acRegActive {
+                        background: #cfe9fc !important;
                     }
                 }
             }
+            // .currentItemLeftLine,
+            // .currentItemRightLine {
+            //     position: absolute;
+            //     background: #ffbf00;
+            //     display: block;
+            //     width: 1px;
+            //     height: 100%;
+            //     top: 0;
+            //     label {
+            //         color: #7176f9;
+            //         position: absolute;
+            //         font-weight: bold;
+            //         top: 100px;
+            //     }
+            // }
         }
     }
     .waittingGanttContentBox {
